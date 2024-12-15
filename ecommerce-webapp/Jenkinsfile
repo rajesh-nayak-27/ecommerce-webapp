@@ -1,0 +1,123 @@
+pipeline {
+    agent any
+
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+        DOCKER_REPO_USER = 'rajeshnayak2799'
+        NAME = 'ecommerce'
+        DOCKER_REPO = "${DOCKER_REPO_USER}/${NAME}"
+
+    }
+    stages {
+        stage('Cleaning Workspace') {
+            steps {
+                script {
+                    cleanWs()
+                }
+            }
+        }
+        stage ("Checkout git scm") {
+            steps {
+                script {
+                    checkout scm
+                }
+            }
+        }
+        stage ('Sonarqube Analysis') {
+            steps {
+                script {
+                    withSonarQubeEnv('sonar-server') {
+                        sh '''$SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectName=ecommerce-webapp \
+                        -Dsonar.projectKey=ecommerce-webapp'''
+                        } 
+                }
+            }
+        }
+        stage('Quality gate checks') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
+                }
+            }
+        }
+        stage('OWASP Dependency-Check Scan') {
+            steps {
+                script {
+                    dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                    dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                }
+            }
+        }
+        stage('Trivy File Scan') {
+            steps {
+                script {
+                    sh "trivy fs . > trivyfs.txt"
+                }   
+            }
+        }
+        stage ('Version Update') {
+            steps {
+                script {
+                    def version_value = input (
+                        message: 'Enter the version to be build',
+                        ok: 'Submit',
+                        parameters: [string(defaultValue:'', name:'VERSION', trim:true)]
+                    )
+                    env.VERSION = "$version_value-$BUILD_NUMBER"
+                }
+            }
+        }
+        stage ('build docker image') {
+            steps {
+                script {
+                    sh "docker system prune -f"
+                    sh "docker container prune -f"
+                    sh "docker build -t ${DOCKER_REPO}:${VERSION} ./ecommerce-webapp"
+                }
+            }
+        }
+        stage ('Trivy Docker Image Scan') {
+            steps {
+                script {
+                    sh "trivy image ${DOCKER_REPO}:${VERSION} >trivyimagescan.txt"
+                }
+            }
+        }
+        stage ('Approve/Deny docker image push stage') {
+            steps {
+                script {
+                    env.VALUE = input(
+                    message: "Do you want to push the docker image ${DOCKER_REPO}:${VERSION} to docker hub repo ? (Yes/No)",
+                    ok: 'Submit',
+                    parameters: [string(defaultValue:'', name:'VALUE',trim:true)]  
+                )
+                }
+            }
+        }
+        stage ('push docker image to docker hub') {
+            when {
+                expression {
+                    env.VALUE == "Yes"
+                }
+            }
+            steps {
+                script {
+                    withCredentials ([usernamePassword (credentialsId:'docker-hub',passwordVariable:'PASS',usernameVariable:'USER')]) {
+                        sh "echo $PASS | docker login -u $USER --password-stdin"
+                        sh "docker push ${DOCKER_REPO}:${VERSION}"
+                        sh 'docker logout'
+                    }
+                }
+            }
+        }
+        stage ('Update kube manifest files') {
+            steps {
+                script {
+                    echo "triggering ecommerce-kubemanifest job"
+                    build job: 'ecommerce-kubemanifest', parameters: [string(name:'DOCKERTAG', value: env.VERSION), string(name:'APP_NAME', value: env.NAME)]
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,26 @@
+* {
+  margin: 0;
+  scroll-behavior: smooth;
+}
+
+#container {
+  background: linear-gradient(90deg, rgba(69,126,142,1) 0%, rgba(165,210,219,1) 100%);
+}
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.greenColor {
+  color: green !important;
+}
+.redColor {
+  color: red !important;
+}

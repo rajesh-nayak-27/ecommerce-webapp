@@ -1,0 +1,10 @@
+.reviewCard {
+    background-color: white;
+}
+
+.reviewCard img {
+    width: 77px;
+    height: 77px;
+    border-radius: 50%;
+    padding-bottom: 8px;
+}

@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce
+  namespace: ecommerce
+  labels:
+    app: ecommerce
+spec:
+  selector:
+    matchLabels:
+      app: ecommerce
+  replicas: 2
+  minReadySeconds: 10
+  stratergy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: ecommerce
+    spec:
+      imagePullSecrets:
+        - name: docker-hub-secret
+      containers:
+        - name: ecommerce
+          image: rajeshnayak2799/ecommerce:1.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          env:
+            - name: DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: DB_URI
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-configmap
+                  key: PORT
+            - name: REACT_APP_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-configmap
+                  key: REACT_APP_BASE_URL
+            - name: FRONTEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-configmap
+                  key: FRONTEND_URL
+            - name: STRIPE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stripe-secret
+                  key: STRIPE_API_KEY
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stripe-secret
+                  key: STRIPE_SECRET_KEY
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-secret
+                  key: JWT_SECRET
+            - name: JWT_EXPIRE
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-configmap
+                  key: JWT_EXPIRE
+            - name: COOKIE_EXPIRE
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-configmap
+                  key: COOKIE_EXPIRE
+            - name: SMTP_SERVICE
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-configmap
+                  key: SMTP_SERVICE
+            - name: SMTP_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-configmap
+                  key: SMTP_HOST
+            - name: SMTP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-configmap
+                  key: SMTP_PORT
+            - name: SMTP_MAIL
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-secret
+                  key: SMTP_MAIL
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-secret
+                  key: SMTP_PASSWORD
+            - name: CLOUDINARY_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: ecommerce-configmap
+                  key: CLOUDINARY_NAME
+            - name: CLOUDINARY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cloudinary-secret
+                  key: CLOUDINARY_API_KEY
+            - name: CLOUDINARY_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cloudinary-secret
+                  key: CLOUDINARY_API_SECRET

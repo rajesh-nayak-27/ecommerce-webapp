@@ -1,0 +1,52 @@
+.sidebar {
+  background: lightblue;
+  display: flex;
+  flex-direction: column;
+  padding-top: 4rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-bottom: 10rem;
+  position: fixed;
+}
+
+.sidebar>a:first-child {
+  padding: 0;
+}
+
+.MuiTreeItem-root.Mui-selected>.MuiTreeItem-content .MuiTreeItem-label:hover,
+.MuiTreeItem-root.Mui-selected:focus>.MuiTreeItem-content .MuiTreeItem-label {
+  background-color: transparent !important;
+}
+
+
+.sidebar>a>h1 {
+  width: 100%;
+  margin-top: 50px;
+  text-align: center;
+}
+
+.sidebar>a>img:hover {
+  filter: drop-shadow(0 0 10px tomato);
+}
+
+.sidebar a {
+  text-decoration: none;
+  color: rgba(0, 0, 0, 0.493);
+  font: 200 1rem "Roboto";
+  padding: 2rem;
+  transition: all 0.5s;
+}
+
+.sidebar a:hover {
+  color: tomato;
+  transform: scale(1.1);
+}
+
+.sidebar a>P {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar a>p>svg {
+  margin-right: 0.5rem;
+}
