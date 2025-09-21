@@ -110,7 +110,7 @@ jobs:
       - name: Build and Push Docker image
         uses: docker/build-push-action@v6
         with:
-            context: ./client
+            context: ./ecommerce-webapp
             push: true
             tags: rajeshnayak2799/ecommerce:latest
             file: ./ecommerce-webapp/Dockerfile
