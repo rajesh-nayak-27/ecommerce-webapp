@@ -1,0 +1,42 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/checkout@v4
+        with:
+          node-version: '16'
+      - name: Frontend Compilation
+        run: |
+          cd ecommerce-webapp/frontend
+          find . -name "*.js" -exec node --check {} +
+      - name: Backend Compilation
+        run: |
+          cd ecommerce-webapp/backend
+          find . -name "*.js" -exec node --check {} +
+
+  gitleak-scan:
+    runs-on: ubuntu-latest
+    needs: compile
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Gitleaks setup
+        uses: gitleaks/gitleaks-action@v2
+      - name: Gitleaks Scan
+        run: |
+          gitleaks detect --source ./ecommerce-webapp/frontend --exit-code 1
+          gitleaks detect --source ./ecommerce-webapp/backend --exit-code 1
+        
+      
+    
+      
+    
