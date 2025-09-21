@@ -59,13 +59,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: SonarQube Scan (client)
+      - name: SonarQube Scan (Frontend)
         uses: sonarsource/sonarqube-scan-action@master
         with:
-          projectBaseDir: client
+          projectBaseDir: ecommerce-webapp/frontend
           args: >
-            -Dsonar.projectKey=myorg_client
-            -Dsonar.projectName=myorg_client
+            -Dsonar.projectKey=ecommerce_frontend
+            -Dsonar.projectName=ecommerce_frontend
             -Dsonar.sources=.
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**
         env:
@@ -82,10 +82,10 @@ jobs:
       - name: SonarQube Scan (api)
         uses: sonarsource/sonarqube-scan-action@master
         with:
-          projectBaseDir: api           
+          projectBaseDir: ecommerce-webapp/backend           
           args: >
-            -Dsonar.projectKey=myorg_api
-            -Dsonar.projectName=myorg_api
+            -Dsonar.projectKey=ecommerce_backend
+            -Dsonar.projectName=ecommerce_backend
             -Dsonar.sources=.
             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**
         env:
