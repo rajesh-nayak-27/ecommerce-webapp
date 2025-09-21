@@ -35,8 +35,128 @@ jobs:
         run: |
           gitleaks detect --source ./ecommerce-webapp/frontend --exit-code 1
           gitleaks detect --source ./ecommerce-webapp/backend --exit-code 1
-        
-      
-    
-      
-    
+
+  trivy_fs_scan:
+    runs-on: ubuntu-latest
+    needs: gitleak-scan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  sonar-frontend:
+    runs-on: server
+    needs: trivy_fs_scan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: SonarQube Scan (client)
+        uses: sonarsource/sonarqube-scan-action@master
+        with:
+          projectBaseDir: client
+          args: >
+            -Dsonar.projectKey=myorg_client
+            -Dsonar.projectName=myorg_client
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  sonar-backend:
+    runs-on: server
+    needs: sonar-frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: SonarQube Scan (api)
+        uses: sonarsource/sonarqube-scan-action@master
+        with:
+          projectBaseDir: api           
+          args: >
+            -Dsonar.projectKey=myorg_api
+            -Dsonar.projectName=myorg_api
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}          
+
+  build_docker_image:
+    runs-on: server
+    needs: sonar-backend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v6
+        with:
+            context: ./client
+            push: true
+            tags: rajeshnayak2799/ecommerce:latest
+            file: ./ecommerce-webapp/Dockerfile
+
+  trivy_image_scan:
+      runs-on: server
+      needs: build_docker_image
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+        - name: Run Trivy image scan for backend
+          uses: aquasecurity/trivy-action@0.28.0
+          with:
+            scan-type: image
+            image-ref: rajeshnayak2799/ecommerce:latest
+            format: table
+            exit-code: '0'                 
+            ignore-unfixed: true
+            vuln-type: os,library
+            severity: CRITICAL,HIGH
+
+  deploy_to_kubernetes:
+    runs-on: server
+    needs: trivy_image_scan
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+    - name: Install AWS CLI
+      run: |
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install --update
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-south-1
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: latest
+    - name: Configure kubeconfig
+      run: |
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.EKS_KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+    - name: Deploy to EKS
+      run: |
+        kubectl apply -f ./ecommerce-kubemanifest 
